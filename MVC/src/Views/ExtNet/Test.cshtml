@@ -1,0 +1,149 @@
+﻿@using Ext.Net.MVC;
+@model System.Collections.IEnumerable
+
+@{
+
+    Layout = "~/Views/Shared/_BaseLayout.cshtml";
+}
+
+@section headtag{
+    <script  type="text/javascript">
+    var deneme = function (test) {
+        //eski yöntem kullanılıyor
+      //  Ext.Msg.alert("ali", App.texta.getValue()); 
+        Ext.Ajax.request({ url: 'Home/Button_Click', param1: "10" }) 
+    }
+
+</script>
+
+
+
+}
+
+
+@section ali1{
+    @(Html.X().FormPanel().Width(800).ButtonAlign(Alignment.Left)
+  
+                                .Buttons(Html.X().Button()
+                        .Text("Temizle"),
+                        Html.X().Button()
+                        .Text("Kaydet")
+                        ))
+
+
+}
+    @section ali
+        {
+
+ 
+
+@(Html.X().FormPanel()
+                .ID("fpHeader")
+                .Width(800)
+                .BodyPadding(5)
+
+                .FieldDefaults(fd =>
+                {
+
+                    fd.MsgTarget = MessageTarget.Side;
+                })
+                .Buttons()
+                .Items(
+                   Html.X().GridPanel()
+                        .Title("Kisiler Data")
+                        .ColumnWidth(0.6)
+                        .Height(600)
+                        .Store(Html.X().Store()
+                            .ID("Store1")
+                            .Data(Model)
+
+                            .Model(Html.X().Model()
+                                .Fields(f =>
+                                {
+                                    f.Add(Html.X().ModelField().Name("id").Type(ModelFieldType.String));
+                                    f.Add(Html.X().ModelField().Name("adi").Type(ModelFieldType.String));
+
+                                })
+                            )
+                        )
+                        .ColumnModel(
+                            Html.X().Column().Text("ID").DataIndex("id"),
+                            Html.X().Column().Text("ADI").DataIndex("adi")
+
+                        )
+                        .Listeners(l => l.SelectionChange.Handler = "if (selected[0]) { this.up('form').getForm().loadRecord(selected[0]); }"),
+
+                Html.X().FieldSet()
+                    .ColumnWidth(0.4)
+                    .Height(300)
+                    .Title("Kisiler details")
+
+
+                    .Items(
+                         Html.X().TextField()
+                         .ID("texta")
+                            .Name("id")
+                            .FieldLabel("ID"),
+                         Html.X().TextField()
+                            .Name("adi")
+                            .FieldLabel("AdI")
+
+                    )
+                )
+                .Buttons(
+                     Html.X().Button()
+                        .Text("Save")
+                        .OnClientClick("var form = this.up('form'); form.getForm().updateRecord(form.down('grid').getSelectionModel().getLastSelected());"),
+                     Html.X().Button()
+                        .Text("Filtrele")
+                        .OnClientClick(" var store = Ext.getStore('Store1');store.filter('id',#{texta}.getValue ()); "),
+                    Html.X().Button()
+                                    .Text("ClearFlteri")
+                                    .OnClientClick(" var store = Ext.getStore('Store1');store.clearFilter(); "),
+                     Html.X().Button()
+                                    .Text("GetVAlue")
+                                    .OnClientClick("alert(#{texta}.getValue ());"),
+
+                     Html.X().Button()
+                                    .Text("YeniDeneme")
+                                   /* .Listeners(ev => ev.Click.Handler = "alert(#{texta}.getValue());")*/
+                                   .Listeners(ev=> ev.Click.Handler = "deneme(#{texta}.getValue());"),
+                     Html.X().Button()
+                     .ID("OKE")
+        .Text("Click me")
+        .DirectClickUrl(Url.Action("Button_Click"))
+//.DirectEvents(de =>
+//{
+//    de.Click.Url = Url.Action("UpdateTimeStamp");
+//    de.Click.Confirmation.ConfirmRequest = true;
+//    de.Click.Confirmation.Title = "Title";
+//    de.Click.Confirmation.Message = "Sample Confirmation Message...";
+
+
+
+//}
+//)
+))
+
+)
+
+
+<h2>3. Button with DirectEvent</h2>
+
+@(Html.X().Button()
+        .Text("Click me")
+        .DirectEvents(de =>
+        {
+            de.Click.Url = Url.Action("Button_Click");
+            de.Click.EventMask.ShowMask = true;
+            de.Click.ExtraParams.Add(new Parameter("Item","test",ParameterMode.Value));
+
+        }
+        )
+)
+
+
+}
+    @section example {
+
+    }
