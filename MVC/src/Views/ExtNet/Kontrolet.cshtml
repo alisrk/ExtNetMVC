@@ -1,0 +1,556 @@
+﻿@using resources = ViewReources.Code
+
+@model BLL.Db.Model.KOD_TABLE_MDL
+
+@{
+    Layout = "~/Views/Shared/_LifeInLayout.cshtml";
+    var X = Html.X();
+}
+
+@section scripts{
+
+    <script type="text/javascript">
+        var validateCode = function () {
+            var valid = App.fpCode.getForm().isValid();
+            App.btnSaveCode.setDisabled(!valid);
+        }
+
+        var clearPage = function () {
+            formReset(App.formPanelContent);
+            App.rsmCode.deselectAll();
+            App.gpCode.getStore().removeAll();
+        }
+
+        var getFilter = function () {
+            App.gpCode.getStore().reload();
+        }
+
+        var clearCode = function () {
+            formReset(App.fpCode);
+            App.rsmCode.deselectAll();
+            App.cboCodeAim.setDisabled(false);
+            App.txtCode.setDisabled(false);
+            App.txtValidDate.allowBlank=true;
+            validateCode();
+        }
+
+        var updateCode = function (fp) {
+
+
+            if (!fp.getForm().getValues().SQ_KOD_ID) {
+                App.gpCode.store.insert(0, new KodTable(fp.getForm().getValues()));
+                fp.getForm().reset();
+            }
+            else {
+
+                if (!fp.getForm().isValid()) {
+                    Ext.net.Notification.show({
+                        iconCls: "icon-exclamation",
+                        html: "Form is invalid",
+                        title: "Error"
+                    });
+                    return false;
+                }
+
+                fp.getForm().updateRecord();
+            }
+
+            clearCode();
+
+            App.cboCodeAim.focus();
+
+
+        }
+
+        var loadCode = function (grid, selectedData) {
+            if (grid.getSelected().length > 0) {
+                App.fpCode.getForm().loadRecord(selectedData);
+
+                if (selectedData.get('ZORUNLU_SECIMLI_TARIH') == 'Z') {
+                    App.txtValidDate.allowBlank = false;
+                }
+                else {
+                    App.txtValidDate.allowBlank=true ;
+                };
+            }
+        }
+
+        var storeLoader = function (a, b, c) {
+
+            if (App.gpCode.getStore().proxy.pendingOperations)
+            {
+                var v = 1;
+            }
+
+            App.gpCode.getStore().proxy.extraParams.filterCodeAim = App.cboFilterCodeAim.getValue();
+            App.gpCode.getStore().proxy.extraParams.filterCode = App.cboFilterCode.getValue();
+            App.gpCode.getStore().proxy.extraParams.filterValueCode = App.txtFilterValueCode.getValue();
+            App.gpCode.getStore().proxy.extraParams.filterDescription = App.txtFilterDescription.getValue();
+            App.gpCode.getStore().proxy.extraParams.filterValidDate = App.txtFilterValidDate.getValue();
+        }
+
+        var gpCodeItemCommand = function (command, record) {
+            switch (command) {
+                case "Delete":
+                    markAsDelete(App.gpCode.getStore(), record, 'SQ_KOD_ID', '@resources.Index.MessageTitleWarning', '@resources.Index.MessageCommitDelete');
+                    break;
+            }
+        }
+
+        var cboCodeAimChanged = function (field,newValue,oldValue) {
+            App.direct.Parameters.GetCodeAimValidDateIsRequired(newValue,{
+                success: function (result) {
+                    if (result == 'Z') {
+                        App.txtValidDate.allowBlank = false;
+                    }
+                    else {
+                        App.txtValidDate.allowBlank = true;
+                    }
+                    App.fpCode.validate();
+                }
+            });
+        }
+
+        var loadFilterCode = function () {
+            App.cboFilterCode.clearValue();
+            App.cboFilterCode.getStore().load();
+        }
+
+        var onGenericSelected = function (a) {
+            var b = a;
+            App.txtFilterDescription.setValue(a.get('Value'));
+        }
+
+    </script>
+}
+
+
+@section pageBody{
+    @(X.Container()
+                .Layout(LayoutType.Fit)
+                .Items(
+                    X.FormPanel()
+                        .ID("formPanelContent")
+                        .BodyPadding(5)
+                        .Border(false)
+                        .Layout(LayoutType.VBox)
+                        .TopBar((System.Action<Ext.Net.ToolbarCollection>)(items =>
+                        {
+                            items.Add(Html.X().Toolbar().Items(buttons =>
+                            {
+                                buttons.Add(Html.X().Button()
+                                    .ID("btnNew")
+                                    .Text(resources.Index.btnNew_text)
+                                    .Icon(Icon.PageWhite)
+                                    .OnClientClick("clearPage();")
+                                );
+                                buttons.Add(Html.X().Button()
+                                    .ID("btnSave")
+                                    .Icon(Icon.Disk)
+                                    .Text(resources.Index.btnSave_text)
+                                    .DirectEvents(de =>
+                                    {
+                                        de.Click.Url = Url.Action("SaveChanges");
+                                        de.Click.ExtraParams.Add(new Parameter
+                                        {
+                                            Name = "data",
+                                            Value = "App.gpCode.store.getChangedData()",
+                                            Mode = ParameterMode.Raw,
+                                            Encode = true
+                                        });
+                                    }
+
+                                    )
+                                );
+                                buttons.Add(X.Button()
+                                    .ID("btnShowGenericFind")
+                                    .Text("Bul")
+                                    .Icon(Icon.Magnifier)
+                                    .DirectEvents(de =>
+                                    {
+                                        de.Click.Url = Url.Action("RenderGenericFindWindow", "Shared", new { area = "" });
+                                        de.Click.ExtraParams.Add(new LifeIn.UI.Web.Models.Shared.GenericFindWindowModel { Type = LifeIn.UI.Web.Models.Shared.GenericFindType.Default, WindowKey = "Code", FirstParameter = "Test" });
+                                    })
+                               );
+
+                            }));
+                        }))
+                        .Items(
+                            X.FormPanel()
+                                .ID("fpFilter")
+                                .BodyPadding(5)
+                                .Layout(LayoutType.HBox)
+                                .MarginSpec("0 0 5 0")
+                                .Frame(true)
+                                .Height(130)
+                                .Width(900)
+                                .DefaultButton("btnFilterBySelection")
+                                .Items(
+                                    X.Container()
+                                        .Layout(LayoutType.Anchor)
+                                        .MarginSpec("0 5 0 0")
+                                        .Flex(1)
+                                        .Items(
+                                            X.ComboBox()
+                                                .ID("cboFilterCodeAim")
+                                                .QueryMode(DataLoadMode.Local)
+                                                .EnableRegEx(true)
+                                                .AnchorHorizontal("95%")
+                                                .DisplayField("Value")
+                                                .ValueField("Key")
+                                                .FieldLabel("Kod Amaç")
+                                                .AutoDataBind(true)
+                                                .Store(X.Store()
+                                                    .ID("StoreCodeAimCombo")
+                                                    .AutoLoad(true)
+                                                    .Model(
+                                                        X.Model()
+                                                            .IDProperty("")
+                                                            .Fields(
+                                                                X.ModelField()
+                                                                    .Name("Key"),
+                                                                X.ModelField()
+                                                                    .Name("Value")
+
+                                                            )
+                                                    )
+                                                    .Proxy(
+                                                        X.AjaxProxy()
+                                                            .Url(Url.Action("GetCodeAimComboBox"))
+                                                            .Reader(Html.X().JsonReader().RootProperty("data"))
+
+                                                    )
+                                                )
+                                                .Listeners(ls =>
+                                                    ls.Select.Handler = "loadFilterCode();"
+                                                    ),
+                                            X.ComboBox()
+                                                .ID("cboFilterCode")
+                                                .TypeAhead(true)
+                                                .QueryMode(DataLoadMode.Local)
+                                                .ForceSelection(true)
+                                                .TriggerAction(TriggerAction.All)
+                                                .DisplayField("Value")
+                                                .ValueField("Key")
+                                                .FieldLabel("Kod")
+                                                .AnchorHorizontal("95%")
+                                                .Store(X.Store()
+                                                    .AutoLoad(false)
+                                                    .Model(X.Model()
+                                                        .IDProperty("Id")
+                                                        .Fields(
+                                                            new ModelField("Key", ModelFieldType.String) { Mapping = "Key" },
+                                                            new ModelField("Value", ModelFieldType.String) { Mapping = "Value" }
+                                                        )
+                                                    )
+                                                    .Proxy(X.AjaxProxy()
+                                                        .Url(Url.Action("GetFilterCodeComboBox"))
+                                                        .Reader(X.JsonReader().RootProperty("data"))
+                                                    )
+                                                    .Parameters(ps =>
+                                                        ps.Add(new StoreParameter("aimCode", "App.cboFilterCodeAim.getValue()", ParameterMode.Raw))
+                                                    )
+                                                ),
+                                            X.TextField()
+                                                .ID("txtFilterValueCode")
+                                                .FieldLabel("Değer Kod")
+                                                .AnchorHorizontal("95%")
+                                        ),
+                                    X.Container()
+                                        .Layout(LayoutType.Anchor)
+                                        .MarginSpec("0 5 0 0")
+                                        .Flex(1)
+                                        .Items(
+                                            X.TextField()
+                                                .ID("txtFilterDescription")
+                                                .FieldLabel("Açıklama")
+                                                .AnchorHorizontal("95%"),
+                                            X.DateField()
+                                                .ID("txtFilterValidDate")
+                                                .FieldLabel("Geçerlilik Tarihi")
+                                                .AnchorHorizontal("95%")
+                                        )
+                                )
+                                .Buttons(
+                                    X.Button()
+                                        .Text("Filtrele")
+                                        .Icon(Icon.Find)
+                                        .ID("btnFilterBySelection")
+                                        .Listeners(l => { l.Click.Handler = "getFilter();"; })
+
+
+                                )
+                                ,
+                            X.GridPanel()
+                                .ID("gpCode")
+                                .Width(900)
+                                .Height(500)
+                                .AutoScroll(true)
+                                .Scroll(ScrollMode.Both)
+                                .MinHeight(350)
+                                .Store(
+                                    X.StoreFor(Model.Codes)
+                                        .ID("StoreCode")
+                                        .AutoLoad(false)
+                                        .PageSize(100)
+                                        .Proxy(X.AjaxProxy()
+                                            .Url(Url.Action("FilterCodesPaging"))
+                                            .Reader(X.JsonReader().RootProperty("data"))
+                                            .ExtraParams(
+                                                p =>
+                                                {
+                                                    p.Add(new Parameter("filterCodeAim", "''", ParameterMode.Raw));
+                                                    p.Add(new Parameter("filterCode", "''", ParameterMode.Raw));
+                                                    p.Add(new Parameter("filterValueCode", "''", ParameterMode.Raw));
+                                                    p.Add(new Parameter("filterDescription", "''", ParameterMode.Raw));
+                                                    p.Add(new Parameter("filterValidDate", "''", ParameterMode.Raw));
+
+                                                }
+                                            )
+
+                                    )
+                                    .Listeners(l => { l.BeforeLoad.Fn = "storeLoader"; })
+
+
+
+                            )
+                            .ColumnModel(
+                                X.ImageCommandColumn()
+                                    .ID("gpCodeCommand")
+                                    .Width(30)
+                                    .Text(resources.Index.gpCodeDeleteCommandText)
+                                    .Commands(
+                                        X.ImageCommand()
+                                            .CommandName("Delete")
+                                            .Icon(Icon.Delete)
+                                            .ToolTip(tt => tt.Text = resources.Index.gpCodeDeleteCommandTooltip)
+                                    )
+                                    .Listeners(ls =>
+                                    {
+                                        ls.Command.Handler = "gpCodeItemCommand(command,record);";
+                                    }
+
+                                    ),
+                                X.Column().Text("Sıra No").DataIndex("SIRA_NO").Width(50),
+                                X.Column().Text("Kod Amaç").DataIndex("KOD_AMAC").Width(65),
+                                X.Column().Text("Kod").DataIndex("KOD").Width(50),
+                                X.Column().Text("Değer Kod").DataIndex("DEGER_KOD").Width(70),
+                                X.Column().Text("Üst Kod").DataIndex("UST_KOD").Width(70),
+                                X.Column().Text("Üst Değ.").DataIndex("UST_DEG").Width(70),
+                                X.Column().Text("Açıklama").DataIndex("ACIKLAMA").Width(150),
+                                X.Column().Text("Muaf.Oran").DataIndex("MUAF_ORAN").Width(70),
+                                X.Column().Text("Muaf Matrah").DataIndex("MUAF_MATRAH").Width(70),
+                                X.DateColumn().Text("Geç. Tar").DataIndex("GECERLILIK_TARIH").Width(70).Format("d.m.Y"),
+                                X.Column().Text("Oran").DataIndex("ORAN").Width(70),
+                                X.Column().Text("Matrah").DataIndex("MATRAH").Width(70),
+                                X.Column().Text("Değ.Açıklama").DataIndex("DEGER_ACIKLAMA").Width(70),
+                                X.Column().Text("Muaf Asg.").DataIndex("MUAF_ASGARI").Width(70),
+                                X.Column().Text("Muaf Azami").DataIndex("MUAF_AZAMI_MAKTU").Width(70),
+                                X.Column().Text("Döviz").DataIndex("ZORUNLU_SECIMLI_TARIH").Width(70),
+                                X.Column().ID("Id").Text("KodId").DataIndex("SQ_KOD_ID").Width(70).Hidden(true)
+                                        .Renderer("return record.phantom ? '' : value;")
+                            )
+                            .SelectionModel(
+                                X.RowSelectionModel()
+                                    .ID("rsmCode")
+                                    .Mode(SelectionMode.Single)
+                                    .AllowDeselect(true)
+                                    .Listeners(
+                                        l => l.Select.Fn = "loadCode"
+                                    )
+
+                            )
+                            .BottomBar(
+                                X.PagingToolbar()
+                                    .DisplayInfo(true)
+
+                            )
+                            .View(
+                                X.GridView()
+                                    .LoadMask(true)
+                                )
+                            ,
+                        X.FormPanel()
+                            .ID("fpCode")
+                            .BodyPadding(5)
+                            .Width(900)
+                            .Height(210)
+                            .Frame(true)
+                            .Layout(LayoutType.HBox)
+                            .DefaultButton("btnSaveCode")
+                            .Items(
+                                X.Container()
+                                    .Layout(LayoutType.Anchor)
+                                    .MarginSpec("0 5 0 0")
+                                    .Flex(1)
+                                    .Items(
+                                        X.HiddenFor(m => m.Codes.FirstOrDefault().SQ_KOD_ID)
+                                            .ID("hdnCodeId"),
+                                        X.ComboBox()
+                                            .ID("cboCodeAim")
+                                            .QueryMode(DataLoadMode.Local)
+                                            .EnableRegEx(true)
+                                            .AnchorHorizontal("95%")
+                                            .DisplayField("Value")
+                                            .ValueField("Key")
+                                            .FieldLabel("Kod Amaç")
+                                            .AutoDataBind(true)
+                                            .AllowBlank(false)
+                                            .Name("KOD_AMAC")
+                                            .Store(X.Store()
+                                                .AutoLoad(true)
+                                                .Model(X.Model()
+                                                    .IDProperty("Id")
+                                                    .Fields(
+                                                        new ModelField("Key", ModelFieldType.String) { Mapping = "Key" },
+                                                        new ModelField("Value", ModelFieldType.String) { Mapping = "Value" }
+                                                    )
+                                                )
+                                                .Proxy(X.AjaxProxy()
+                                                    .Url(Url.Action("GetCodeAimComboBox"))
+                                                    .Reader(X.JsonReader().RootProperty("data"))
+                                                )
+                                            )
+                                            .Listeners(l =>
+                                            {
+                                                l.Change.Fn = "cboCodeAimChanged";
+                                            })
+                                            ,
+                                        X.TextFieldFor(m => m.Codes.FirstOrDefault().KOD)
+                                            .ID("txtCode")
+                                            .FieldLabel("Kod")
+                                            .AllowBlank(false),
+                                        X.TextFieldFor(m => m.Codes.FirstOrDefault().DEGER_KOD)
+                                            .ID("txtValueCode")
+                                            .FieldLabel("Değer Kod")
+                                            .AllowBlank(true),
+                                        X.TextFieldFor(m => m.Codes.FirstOrDefault().UST_KOD)
+                                            .ID("txtParentCode")
+                                            .FieldLabel("Üst Kod")
+                                            .AllowBlank(true),
+                                        X.TextFieldFor(m => m.Codes.FirstOrDefault().UST_DEG)
+                                            .ID("txtParentValue")
+                                            .FieldLabel("Üst Değ")
+                                            .AllowBlank(true)
+                                    )
+                                    ,
+                                X.Container()
+                                    .Layout(LayoutType.Anchor)
+                                    .MarginSpec("0 5 0 0")
+                                    .Flex(1)
+                                    .Items(
+                                        X.TextFieldFor(m => m.Codes.FirstOrDefault().ACIKLAMA)
+                                            .ID("txtDescription")
+                                            .FieldLabel("Açıklama")
+                                            .AllowBlank(false),
+                                        X.NumberFieldFor(m => m.Codes.FirstOrDefault().MUAF_ORAN)
+                                            .ID("txtExemptRate")
+                                            .FieldLabel("Muaf. Oran")
+                                            .AllowBlank(true)
+                                            .HideTrigger(true),
+                                        X.NumberFieldFor(m => m.Codes.FirstOrDefault().MUAF_MATRAH)
+                                            .ID("txtExemptBasis")
+                                            .FieldLabel("Muaf. Matrah")
+                                            .AllowBlank(true)
+                                            .HideTrigger(true),
+                                        X.DateFieldFor(m => m.Codes.FirstOrDefault().GECERLILIK_TARIH)
+                                            .ID("txtValidDate")
+                                            .FieldLabel("Geç.Tarih")
+                                            .AllowBlank(false)
+                                            .Format("d.m.Y"),
+                                        X.ComboBox()
+                                            .ID("cboValueAim")
+                                            .TypeAhead(true)
+                                            .QueryMode(DataLoadMode.Local)
+                                            .ForceSelection(true)
+                                            .TriggerAction(TriggerAction.All)
+                                            .DisplayField("Value")
+                                            .ValueField("Key")
+                                            .FieldLabel("Değ. Amaç")
+                                            .AnchorHorizontal("95%")
+                                            .Name("DEG_AMAC")
+                                            .Store(X.Store()
+                                                .AutoLoad(true)
+                                                .Model(X.Model()
+                                                    .IDProperty("Id")
+                                                    .Fields(
+                                                        new ModelField("Key", ModelFieldType.String) { Mapping = "Key" },
+                                                        new ModelField("Value", ModelFieldType.String) { Mapping = "Value" }
+                                                    )
+                                                )
+                                                .Proxy(X.AjaxProxy()
+                                                    .Url(Url.Action("GetValueAim"))
+                                                    .Reader(X.JsonReader().RootProperty("data"))
+                                                )
+                                            ),
+                                        X.NumberFieldFor(m => m.Codes.FirstOrDefault().ORAN)
+                                            .ID("txtRate")
+                                            .FieldLabel("Oran")
+                                            .AllowBlank(true)
+                                            .HideTrigger(true)
+                                    ),
+                                X.Container()
+                                    .Layout(LayoutType.Anchor)
+                                    .MarginSpec("0 5 0 0")
+                                    .Flex(1)
+                                    .Items(
+                                        X.TextFieldFor(m => m.Codes.FirstOrDefault().MATRAH)
+                                            .ID("txtBasis")
+                                            .FieldLabel("Matrah")
+                                            .AllowBlank(true),
+                                        X.TextFieldFor(m => m.Codes.FirstOrDefault().DEGER_ACIKLAMA)
+                                            .ID("txtValueDescription")
+                                            .FieldLabel("Değer Açıklama")
+                                            .AllowBlank(true),
+                                        X.NumberFieldFor(m => m.Codes.FirstOrDefault().SIRA_NO)
+                                            .ID("txtQueueNumber")
+                                            .FieldLabel("Sıra No")
+                                            .AllowBlank(true)
+                                            .HideTrigger(true),
+                                        X.NumberFieldFor(m => m.Codes.FirstOrDefault().MUAF_ASGARI)
+                                            .ID("txtExemptAtLeast")
+                                            .FieldLabel("Muaf Asgari")
+                                            .AllowBlank(true)
+                                            .HideTrigger(true),
+                                        X.NumberFieldFor(m => m.Codes.FirstOrDefault().MUAF_AZAMI_MAKTU)
+                                            .ID("txtMaxFixedExempt")
+                                            .FieldLabel("Muaf Azm. Maktu")
+                                            .AllowBlank(true)
+                                            .HideTrigger(true),
+                                        X.TextFieldFor(m => m.Codes.FirstOrDefault().DOVIZ)
+                                            .ID("txtExchange")
+                                            .FieldLabel("Döviz")
+                                            .AllowBlank(true)
+
+
+                                    )
+                            )
+                            .Buttons(
+                                X.Button()
+                                    .ID("btnSaveCode")
+                                    .Text("Ekle Güncelle")
+                                    .OnClientClick("updateCode(App.fpCode)"),
+                                X.Button()
+                                    .ID("btnNewCode")
+                                    .Text("Yeni")
+                                    .OnClientClick("clearCode();")
+
+                            )
+                            .Listeners(
+                                l =>
+                                {
+                                    l.ValidityChange.Handler = "validateCode()";
+                                    l.AfterRender.Handler = "validateCode()";
+                                }
+
+                            )
+
+
+
+                    )
+
+        )
+    )
+
+
+}

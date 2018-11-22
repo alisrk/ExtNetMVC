@@ -6,6 +6,7 @@ using System;
 
 namespace Ext.Net.MVC.Examples.Controllers
 {
+    [DirectController]
     public class ExtNetController : Controller
     {
         public ActionResult Index()
@@ -52,6 +53,24 @@ namespace Ext.Net.MVC.Examples.Controllers
         public ActionResult UpdateTimeStamp()
         {
             X.Msg.Notify("The Server Time is: ", DateTime.Now.ToLongTimeString()).Show();
+            return this.Direct();
+        }
+
+        [DirectMethod]
+        public DirectResult DirectDeneme(String deneme)
+        {
+            var ali = X.GetCmp<TextArea>("area1");
+            
+            // ali.Text = "yes";
+              X.Msg.Alert("The Server Time is: ", deneme).Show();
+           // X.AddScript("App.area1.setValue('agaa')");
+            return this.Direct();
+        }
+
+        public ActionResult ClickMeHandler(string sender)
+        {
+        //     X.Msg.Alert("DirectEvent", string.Format("Item - {0}", sender)).Show();
+
             return this.Direct();
         }
 

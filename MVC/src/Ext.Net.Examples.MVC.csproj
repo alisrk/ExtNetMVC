@@ -1328,6 +1328,7 @@
     <Content Include="Views\Main\_RedirectionOverlay.cshtml" />
     <Content Include="Views\ExtNet\Test.cshtml" />
     <Content Include="Scripts\jquery-1.10.2.min.map" />
+    <Content Include="Views\ExtNet\Kontrolet.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Areas\Dynamic_Partial_Rendering\Views\Web.config" />

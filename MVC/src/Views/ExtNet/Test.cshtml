@@ -12,8 +12,18 @@
         //eski yöntem kullanılıyor
       //  Ext.Msg.alert("ali", App.texta.getValue()); 
         Ext.Ajax.request({ url: 'Home/Button_Click', param1: "10" }) 
-    }
+        }
+        var addRecord = function (form, grid) {
+            Ext.Msg.alert("ali", "");
+            grid.store.insert( new Kisiler(form.getForm().getValues()));
+        }
 
+        var updateCode = function (fp) {
+            if (!fp.getForm().getValues().id) {
+                App.GridPanel.store.insert(0, new Kisiler(fp.getForm.getValues()));
+                fp.getForm().reset();
+            }
+        }
 </script>
 
 
@@ -22,6 +32,8 @@
 
 
 @section ali1{
+
+
     @(Html.X().FormPanel().Width(800).ButtonAlign(Alignment.Left)
   
                                 .Buttons(Html.X().Button()
@@ -52,6 +64,7 @@
                    Html.X().GridPanel()
                         .Title("Kisiler Data")
                         .ColumnWidth(0.6)
+                        .ID("GridPanel")
                         .Height(600)
                         .Store(Html.X().Store()
                             .ID("Store1")
@@ -94,6 +107,9 @@
                      Html.X().Button()
                         .Text("Save")
                         .OnClientClick("var form = this.up('form'); form.getForm().updateRecord(form.down('grid').getSelectionModel().getLastSelected());"),
+                      Html.X().Button()
+                        .Text("Insert")
+                        .OnClientClick("updateCode(App.fpHeader)"),
                      Html.X().Button()
                         .Text("Filtrele")
                         .OnClientClick(" var store = Ext.getStore('Store1');store.filter('id',#{texta}.getValue ()); "),
@@ -111,18 +127,31 @@
                      Html.X().Button()
                      .ID("OKE")
         .Text("Click me")
-        .DirectClickUrl(Url.Action("Button_Click"))
-//.DirectEvents(de =>
-//{
-//    de.Click.Url = Url.Action("UpdateTimeStamp");
-//    de.Click.Confirmation.ConfirmRequest = true;
-//    de.Click.Confirmation.Title = "Title";
-//    de.Click.Confirmation.Message = "Sample Confirmation Message...";
+
+            .DirectEvents(de =>
+            {
+                de.Click.Url = Url.Action("UpdateTimeStamp");
+                de.Click.Confirmation.ConfirmRequest = true;
+                de.Click.Confirmation.Title = "Title";
+                de.Click.Confirmation.Message = "Sample Confirmation Message...";
 
 
 
-//}
-//)
+            }
+)
+, Html.X().Button()
+                .ID("Button2")
+                .Text("Show Bottom")
+                .DirectEvents(de =>
+                {
+                    de.Click.Url = "/ExtNet/ClickMeHandler";
+                    de.Click.CleanRequest = true;
+                    de.Click.Method = HttpMethod.POST;
+                    de.Click.Confirmation.ConfirmRequest = true;
+                    de.Click.Confirmation.Title = "Confirmation title";
+                    de.Click.ExtraParams.Add(new Parameter("msg", "Hello!", ParameterMode.Value));
+
+                })
 ))
 
 )
